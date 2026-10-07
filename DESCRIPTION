@@ -16,3 +16,5 @@ Imports:
     parallel
 Suggests: 
     profvis
+URL: https://github.com/jexoss/lab6
+BugReports: https://github.com/jexoss/lab6/issues
