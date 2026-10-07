@@ -1,11 +1,18 @@
 Package: lab6
-Title: What the Package Does (One Line, Title Case)
+Title: Solve the Knapsack Problems with Brute Force, Dynamic Programming and 
+  Greedy Algorithms
 Version: 0.0.0.9000
 Authors@R: 
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Description: Implements three algorithms for the 0/1 knapsack problem:
+  an exact brute force search, an exact dynamic programming solution,
+  and a fast greedy approximation. The brute force search can optionally be
+  parallelized across multiple cores.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.1.0
+Imports: 
+    parallel
+Suggests: 
+    profvis
