@@ -11,10 +11,13 @@ Description: Implements three algorithms for the 0/1 knapsack problem:
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
 Imports: 
     parallel
 Suggests: 
     profvis
 URL: https://github.com/jexoss/lab6
 BugReports: https://github.com/jexoss/lab6/issues
+Depends: 
+    R (>= 3.5)
+LazyData: true
+Config/roxygen2/version: 8.1.0
