@@ -1,0 +1,167 @@
+---
+title: "Knapsack problem lab report"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Knapsack problem lab report}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(lab6)
+```
+
+## The data
+
+All examples use `knapsack_objects`, a data.frame of 2000 randomly generated
+objects, each with a weight `w` and a value `v`, generated with a fixed seed 
+so results are reproducible.
+
+```{r}
+head(knapsack_objects)
+nrow(knapsack_objects)
+```
+
+## Brute force search
+
+`brute_force_knapsack()` finds the exact optimal solution by checking every
+possible subset of the objects. Its running time is O(2^n), so it is only 
+practical for small n.
+
+```{r}
+brute_force_knapsack(x = knapsack_objects[1:8, ], W = 3500)
+brute_force_knapsack(x = knapsack_objects[1:12, ], W = 3500)
+brute_force_knapsack(x = knapsack_objects[1:8, ], W = 2000)
+brute_force_knapsack(x = knapsack_objects[1:12, ], W = 2000)
+```
+
+**Question: how much time does it take to run the algorithm for n = 16
+objects?**
+
+```{r}
+system.time(brute_force_knapsack(x = knapsack_objects[1:16, ], W = 3500))
+```
+
+## Dynamic programming
+
+`knapsack_dynamic()` finds the same exact solution using dynamic programming.
+Since the weights are integers, the running time is O(W * n), which scales far 
+better than brute force for larger n.
+
+```{r}
+knapsack_dynamic(x = knapsack_objects[1:8, ], W = 3500)
+knapsack_dynamic(x = knapsack_objects[1:12, ], W = 3500)
+knapsack_dynamic(x = knapsack_objects[1:8, ], W = 2000)
+knapsack_dynamic(x = knapsack_objects[1:12, ], W = 2000)
+```
+
+**Question: how much time does it take to run the algorithm for 
+n = 500 objects?**
+
+```{r}
+system.time(knapsack_dynamic(x = knapsack_objects[1:500, ], W = 3500))
+```
+
+## Profiling and optimizing knapsack_dynamic()
+
+Profiling `knapsack_dynamic()` with `profvis` showed that most of the time 
+was spent in the inner loop, which filled the dynamic programming table one
+cell at a time. The inner loop was rewritten to update an entire table row
+at once using `pmax()`, avoiding per-cell indexing.
+
+The code below reproduces the original, unvectorized inner loop locally for 
+comparison, and times it against the current, vectorized implementation on the
+same input.
+
+```{r}
+knapsack_dynamic_naive <- function(x, W) {
+  n <- nrow(x)
+  Wcap <- floor(W)
+  m <- matrix(0, nrow = n + 1, ncol = Wcap + 1)
+  
+  for (i in seq_len(n)) {
+    wi <- x$w[i]
+    vi <- x$v[i]
+    for (w in 0:Wcap) {
+      if (wi > w) {
+        m[i + 1, w + 1] <- m[i, w + 1]
+      }
+      else {
+        m[i + 1, w + 1] <- max(m[i, w + 1], m[i, w - wi + 1] + vi)
+      }
+    }
+  }
+  m[n + 1, Wcap + 1]
+}
+
+t_naive <- system.time(knapsack_dynamic_naive(x = knapsack_objects[1:500, ], W = 3500))
+t_fast <- system.time(knapsack_dynamic(x = knapsack_objects[1:500, ], W = 3500))
+
+t_naive
+t_fast
+```
+
+**Question: what performance gain could you get by trying to improve your 
+code?**
+
+```{r}
+as.numeric(t_naive["elapsed"]) / as.numeric(t_fast["elapsed"])
+```
+
+## Greedy heuristic
+`greedy_knapsack()` sorts the objects by value per unit weight and adds
+them in that order, stopping as soon as an object no longer fits. this does not
+guarantee an optimal solution but it is guaranteed to return at least 50% of 
+the true maximum value, and runs in O(nlogn).
+
+```{r}
+greedy_knapsack(x = knapsack_objects[1:800, ], W = 3500)
+greedy_knapsack(x = knapsack_objects[1:1200, ], W = 3500)
+```
+
+**Question: how much time does it take to run the algorithm for n = 1 000 000
+objects?**
+
+```{r}
+set.seed(1)
+n_big <- 1000000
+big_objects <- data.frame(
+  w = sample(1:4000, size = n_big, replace = TRUE),
+  v = runif(n_big, 0, 10000)
+)
+
+system.time(greedy_knapsack(x = big_objects, W = 3500))
+```
+
+## Parallelizing brute force search
+`brute_force_knapsack()` accepts a `parallel` argument. When `True`, the search
+space is split into one chunk per detected CPU core, searched independently
+with `parallel::makeCluster()`, and the best result acros chunks is returned.
+
+```{r}
+brute_force_knapsack(x = knapsack_objects[1:16, ], W = 3500)
+brute_force_knapsack(x = knapsack_objects[1:16, ], W = 3500, parallel = TRUE)
+```
+
+**Question: what performance gain could you get by parallelizing brute force 
+search?**
+
+```{r}
+t_seq <- system.time(brute_force_knapsack(x = knapsack_objects[1:20, ], W = 3500))
+t_par <- system.time(brute_force_knapsack(x = knapsack_objects[1:20, ], W = 3500, parallel = TRUE))
+
+t_seq
+t_par
+as.numeric(t_seq["elapsed"]) / as.numeric(t_par["elapsed"])
+```
+
+The speedup is smaller than the number of detected cores would suggest,
+since starting the cluster and copying data to each worker process adds
+overhead that does not shrink proportionally with the search space.

@@ -4,32 +4,45 @@
 \alias{brute_force_knapsack}
 \title{Solve the knapsack problem with brute force}
 \usage{
-brute_force_knapsack(x, W)
+brute_force_knapsack(x, W, parallel = FALSE)
 }
 \arguments{
 \item{x}{A data.frame with columns \code{v} (value) and \code{w}
 (weight), both positive.}
 
 \item{W}{the knapsack's weight capacity, a positive numeric scalar.}
+
+\item{parallel}{If \code{TRUE}, parallelize the search across the detected
+CPU cores. Defaults to \code{FALSE}}
 }
 \value{
 A list with \code{value} (the maximum total value found) and
 \code{elements} (the row indices of \code{x} included in that solution).
 }
 \description{
-finds the exact solution to the 0/1 knapsack problem by exhaustively checking
-every possible subset of the objects. Each subset is represented as a
-binary number, generated with \code{intToBits()}, where a 1 in a bit
-position k means object k is included.
+Finds the exact solution to the 0/1 knapsack problem by exhaustively
+chekcing every possible subset of the objects. Each subset it
+represented as a binary number, generated with \code{intToBits()}, where
+a 1 in bit position k means object k is included.
 }
 \details{
-With n objects there are 2^n possible subsets, so the running time grows
+with n objects there are 2^n possible subsets, so the running time grows
 exponentially. This is the only approach that is guaranteed to find the
-exact optima l solution, but it is only practical for small n
-(rougly n <= 20)
+exact optimal solution, but it is only practical for small n
+(roughly n <= 20).
+
+When \code{parallel = TRUE}, the search space is split into one chunk per
+detected CPU core, searched independently in separate processes
+with \code{parallel::makeCluster()}, and the best result across chunks is
+is returned. This uses a PSOCK cluster rather than forking, so it works the
+same way on Windows, macOS and Linux, though the actual speedup
+achieved is platform- and hardware-dependent.
 }
 \examples{
 brute_force_knapsack(x = knapsack_objects[1:8, ], W = 3500)
+\dontrun{
+brute_force_knapsack(x = knapsack_objects[1:16, ], W = 3500, parallel = TRUE)
+}
 
 }
 \references{
